@@ -260,6 +260,25 @@ class Likes
     @question_id = options['question_id']
     @user_id = options['user_id']
   end
+
+
+  def self.likers_for_question_id(question_id)
+        likes = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+            SELECT *
+            FROM question_likes
+            WHERE 
+            question_id = ?;
+        
+        SQL
+        return likes.map{|user| Users.find_by_id(user['user_id'])}
+  end
+
+  def self.num_likes_for_question_id(question_id)
+
+  end
+
+
+
 end
 
 # puts "---- TABLE DISPLAYS BELOW ----"
@@ -329,4 +348,10 @@ puts "---- HARD ----"
 firstuser = Users.find_by_id(1)
 firstquestion = Questions.find_by_id(1)
 # p QuestionFollows.most_followed_questions(2)
-p firstquestion.most_followed(2)
+# p firstquestion.most_followed(2)
+
+p Questions.most_followed(2)
+
+p Likes.likers_for_question_id(1)
+p Likes.likers_for_question_id(3)
+

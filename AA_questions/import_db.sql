@@ -115,3 +115,16 @@ PRAGMA foreign_keys=ON;
       (9, 1),
       (3, 2);
       
+      INSERT INTO 
+      question_likes(question_id,user_id)
+      VALUES
+      (1, 1),
+      (1, 2),
+      (3, 1),
+      (4, 1),
+      (5, 1),
+      (6, 2),
+      (7, 1),
+      (8, 2),
+      (9, 1),
+      (3, 2);
