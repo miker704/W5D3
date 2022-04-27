@@ -86,6 +86,20 @@ class Questions
     questions.map {|q| Questions.new(q)}
   end
 
+  def author
+    question_id = self.id
+    user_id = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT * FROM question_follows WHERE question_id = ?
+    SQL
+    user = Users.find_by_id(user_id.first["user_id"])
+    return [user.fname, user.lname]
+  end
+
+  def replies
+    reply = Replies.find_by_question_id(self.id)
+    return reply
+  end
+
   def initialize(options)
     @id = options['id']
     @title = options['title']
@@ -101,6 +115,20 @@ class QuestionFollows
       SELECT * FROM question_follows WHERE id = ?;
     SQL
     QuestionFollows.new(question_follow.first)
+  end
+
+  def self.followers_for_question_id(question_id)
+    followers = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        id, question_id, user_id
+      FROM
+        question_follows
+      JOIN questions ON questions.id = question_follows.question_id
+      JOIN users ON users.id = question_follows.user_id
+      WHERE
+       question_id = ?;
+    SQL
+    followers.map {|user| QuestionFollows.new(user)}
   end
 
   def initialize(options)
@@ -145,6 +173,26 @@ class Replies
     reply.map {|comment| Replies.new(comment)}
   end
 
+  def author
+    return Users.find_by_id(self.user_id)
+  end
+
+  def question
+    return Questions.find_by_id(self.question_id)
+  end
+
+  def parent_reply
+    raise "You have no parent reply" if self.reply_id.nil?
+    Replies.find_by_id(self.reply_id)
+  end
+
+  def child_reply
+    children = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+      SELECT * FROM replies WHERE reply_id = ?
+    SQL
+    children.map {|rep| Replies.new(rep)}
+  end
+
   def initialize(options)
     @id = options['id']
     @body = options['body']
@@ -172,34 +220,51 @@ class Likes
   end
 end
 
+puts "---- USERS ----"
+SQLite3::Database.new("questions.db") do |db|
+    db.execute("SELECT * FROM users") do |row|
+        p row
+    end
+end
 
-# SQLite3::Database.new("questions.db") do |db|
-#     db.execute("SELECT * FROM users") do |row|
-#         p row
-#     end
-# end
+puts 
+puts "---- QUESTIONS ----"
+SQLite3::Database.new("questions.db") do |db|
+    db.execute("SELECT * FROM questions") do |row|
+        p row
+    end
+end
 
-testuser = QuestionsDatabase.instance.execute(<<-SQL, 1)
-      SELECT * FROM users WHERE id = ?;
-    SQL
-Users.new(testuser.first)
+# EASY
 
-testq = QuestionsDatabase.instance.execute(<<-SQL, 1)
-      SELECT * FROM questions WHERE id = ?
-    SQL
-Questions.new(testq.first)
+# p question = Questions.find_by_author_id(1)
+# puts
+# p Replies.find_by_user_id(2)
+# puts
+# p Replies.find_by_question_id(1)
+# puts
+# p leo = Users.find_by_name('Leo', 'Chung')
+# puts
+# p leo.authored_questions
+# puts
+# p leo.authored_replies
+# puts
+# p question.first.author
+# puts
+# p question.first.replies
+# puts
 
+# reply = Replies.find_by_id(3)
+# p reply.author
+# puts
+# p reply.question
+# puts
+# p reply.parent_reply
+# puts
+# p reply.child_reply
+# puts
 
-p question = Questions.find_by_author_id(1)
-puts
-p Replies.find_by_user_id(1)
-puts
-p Replies.find_by_question_id(1)
-puts
-p leo = Users.find_by_name('Leo', 'Chung')
-puts
-p leo.authored_questions
-puts
-p leo.authored_replies
-puts
-p question.author
+# Medium
+
+p QuestionFollows.followers_for_question_id(1)
+
