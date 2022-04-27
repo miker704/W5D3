@@ -45,6 +45,10 @@ class Users
     return author
   end
   
+  def followed_questions
+    QuestionFollows.followed_questions_for_user_id(self.id)
+  end
+
   def initialize(options)
     @id = options['id']
     @fname = options['fname']
@@ -86,6 +90,10 @@ class Questions
     questions.map {|q| Questions.new(q)}
   end
 
+  def self.most_followed(n)
+    QuestionFollows.most_followed_questions(n)
+  end
+
   def author
     question_id = self.id
     user_id = QuestionsDatabase.instance.execute(<<-SQL, question_id)
@@ -98,6 +106,10 @@ class Questions
   def replies
     reply = Replies.find_by_question_id(self.id)
     return reply
+  end
+
+  def followers
+    QuestionFollows.followers_for_question_id(self.id)
   end
 
   def initialize(options)
@@ -120,15 +132,45 @@ class QuestionFollows
   def self.followers_for_question_id(question_id)
     followers = QuestionsDatabase.instance.execute(<<-SQL, question_id)
       SELECT
-        id, question_id, user_id
+        *
       FROM
         question_follows
       JOIN questions ON questions.id = question_follows.question_id
       JOIN users ON users.id = question_follows.user_id
       WHERE
-       question_id = ?;
+        question_id = ?
+      GROUP BY
+        users.id;
     SQL
-    followers.map {|user| QuestionFollows.new(user)}
+    followers.map {|user| Users.find_by_id(user['id'])}
+  end
+
+  def self.followed_questions_for_user_id(user_id)
+    questions = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        *
+      FROM
+        question_follows
+      JOIN users ON users.id = question_follows.user_id
+      WHERE
+        user_id = ?
+      SQL
+    questions.map {|quest| Questions.find_by_id(quest["question_id"])}
+  end
+
+  def self.most_followed_questions(n)
+    questions = QuestionsDatabase.instance.execute(<<-SQL, n)
+      SELECT
+        *
+      FROM
+        question_follows
+      JOIN questions ON questions.id = question_follows.question_id
+      JOIN users ON users.id = question_follows.user_id
+      GROUP BY
+        questions.id
+      LIMIT ?
+    SQL
+    questions
   end
 
   def initialize(options)
@@ -220,23 +262,31 @@ class Likes
   end
 end
 
-puts "---- USERS ----"
-SQLite3::Database.new("questions.db") do |db|
-    db.execute("SELECT * FROM users") do |row|
-        p row
-    end
-end
+# puts "---- TABLE DISPLAYS BELOW ----"
+# puts "---- USERS ----"
+# SQLite3::Database.new("questions.db") do |db|
+#     db.execute("SELECT * FROM users") do |row|
+#         p row
+#     end
+# end
 
-puts 
-puts "---- QUESTIONS ----"
-SQLite3::Database.new("questions.db") do |db|
-    db.execute("SELECT * FROM questions") do |row|
-        p row
-    end
-end
+# puts
 
-# EASY
+# puts "---- QUESTIONS ----"
+# SQLite3::Database.new("questions.db") do |db|
+#     db.execute("SELECT * FROM questions") do |row|
+#         p row
+#     end
+# end
 
+# puts "---- QUESTIONS FOLLOWS ----"
+# SQLite3::Database.new("questions.db") do |db|
+#     db.execute("SELECT * FROM question_follows") do |row|
+#         p row
+#     end
+# end
+
+# puts "---- EASY ----""
 # p question = Questions.find_by_author_id(1)
 # puts
 # p Replies.find_by_user_id(2)
@@ -264,7 +314,19 @@ end
 # p reply.child_reply
 # puts
 
-# Medium
+# puts "---- Medium ----"
+# firstuser = Users.find_by_id(1)
+# firstquestion = Questions.find_by_id(1)
+# p QuestionFollows.followers_for_question_id(1)
+# puts
+# p QuestionFollows.followed_questions_for_user_id(1)
+# puts
+# p firstuser.followed_questions
+# puts
+# p firstquestion.followers
 
-p QuestionFollows.followers_for_question_id(1)
-
+puts "---- HARD ----"
+firstuser = Users.find_by_id(1)
+firstquestion = Questions.find_by_id(1)
+# p QuestionFollows.most_followed_questions(2)
+p firstquestion.most_followed(2)
