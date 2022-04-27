@@ -274,6 +274,15 @@ class Likes
   end
 
   def self.num_likes_for_question_id(question_id)
+    likes = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+        SELECT count(question_id)
+        FROM question_likes
+        WHERE 
+        question_id = ?;
+
+        SQL
+        # return likes.map{|liked| Questions.find_by_id(liked['question_id'])}
+        return likes
 
   end
 
@@ -355,3 +364,5 @@ p Questions.most_followed(2)
 p Likes.likers_for_question_id(1)
 p Likes.likers_for_question_id(3)
 
+p Likes.num_likes_for_question_id(5)
+p Likes.num_likes_for_question_id(3)
